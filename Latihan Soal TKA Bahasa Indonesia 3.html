@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi TKA Bahasa Indonesia SMP</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #3b82f6;
+            --bg: #f3f4f6;
+            --text: #1f2937;
+            --border: #e5e7eb;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
+        header { background-color: var(--primary); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 10; }
+        .container { display: flex; flex: 1; overflow: hidden; }
+        .wacana-panel { flex: 1; padding: 2rem; background: white; border-right: 2px solid var(--border); overflow-y: auto; }
+        .soal-panel { flex: 1; padding: 2rem; background: #fafafa; overflow-y: auto; }
+        .wacana-title { color: var(--primary); margin-bottom: 1rem; border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; }
+        .wacana-text { line-height: 1.8; text-align: justify; font-size: 1.05rem; margin-bottom: 1rem; }
+        .soal-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .soal-number { font-weight: bold; color: var(--secondary); margin-bottom: 0.5rem; display: block; }
+        .soal-text { font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem; }
+        .options { display: flex; flex-direction: column; gap: 0.5rem; }
+        .option-label { display: flex; align-items: center; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+        .option-label:hover { background-color: #eff6ff; border-color: var(--secondary); }
+        input[type="radio"] { margin-right: 10px; transform: scale(1.2); }
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 1rem; }
+        button { padding: 0.75rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: background 0.3s; }
+        .btn-prev { background-color: #9ca3af; color: white; }
+        .btn-next { background-color: var(--secondary); color: white; }
+        .btn-submit { background-color: #10b981; color: white; width: 100%; margin-top: 2rem; padding: 1rem; font-size: 1.2rem; }
+        button:hover { filter: brightness(1.1); }
+        #result-screen { display: none; padding: 3rem; text-align: center; background: white; height: 100%; width: 100%; position: absolute; top: 0; left: 0; z-index: 20; overflow-y: auto; }
+        .score-circle { width: 150px; height: 150px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: bold; margin: 2rem auto; }
+        .review-box { text-align: left; background: var(--bg); padding: 1.5rem; border-radius: 8px; margin-top: 1rem; margin-bottom: 1rem; }
+        .correct { color: #10b981; font-weight: bold; }
+        .incorrect { color: #ef4444; font-weight: bold; }
+        .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-bottom: 1rem; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        .badge-fiksi { background: #fce7f3; color: #9d174d; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h2>TKA SMP/MTs - Bahasa Indonesia</h2>
+        <p>Simulasi 30 Soal Berbasis Literasi</p>
+    </div>
+    <div id="wacana-indicator">Wacana 1 dari 5</div>
+</header>
+
+<div class="container" id="quiz-container">
+    <div class="wacana-panel">
+        <span class="badge" id="wacana-type">Teks Informasi</span>
+        <h2 class="wacana-title" id="wacana-title">Memuat...</h2>
+        <div class="wacana-text" id="wacana-text">Memuat wacana...</div>
+    </div>
+    
+    <div class="soal-panel">
+        <div id="soal-container">
+            <!-- Soal di-generate via JS -->
+        </div>
+        <div class="nav-buttons">
+            <button class="btn-prev" id="btn-prev" onclick="prevWacana()" style="display: none;">&laquo; Wacana Sebelumnya</button>
+            <button class="btn-next" id="btn-next" onclick="nextWacana()">Wacana Selanjutnya &raquo;</button>
+        </div>
+        <button class="btn-submit" id="btn-submit" onclick="submitQuiz()" style="display: none;">Selesai & Hitung Nilai</button>
+    </div>
+</div>
+
+<div id="result-screen">
+    <h2>Hasil Simulasi TKA Bahasa Indonesia</h2>
+    <div class="score-circle" id="final-score">0</div>
+    <h3>Evaluasi Detail:</h3>
+    <div id="review-container"></div>
+    <button class="btn-next" style="margin-top:2rem;" onclick="location.reload()">Ulangi Tes</button>
+</div>
+
+<script>
+    const db = [
+        {
+            id: 1,
+            type: "badge-info",
+            typeName: "Teks Informasi",
+            title: "Ancaman Senyap di Lahan Pertanian Kita",
+            text: "<p>Mikroplastik, partikel plastik berukuran kurang dari 5 milimeter, tidak hanya mencemari lautan, tetapi juga mulai menginvasi lahan pertanian produktif. Penelitian terbaru dari Institut Pertanian menunjukkan bahwa penggunaan mulsa plastik (lembaran plastik penutup tanah untuk menekan gulma) yang masif menjadi penyumbang utama residu mikroplastik di tanah.</p><p>Ketika mulsa plastik terpapar panas matahari dan hujan terus-menerus, plastik tersebut akan rapuh dan terpecah menjadi partikel-partikel kecil. Partikel ini kemudian menyusup ke dalam pori-pori tanah. Keberadaan mikroplastik di dalam tanah mengubah struktur fisik tanah, mengurangi kemampuannya menahan air, dan mengganggu aktivitas cacing tanah serta mikrob baik yang esensial untuk kesuburan.</p><p>Lebih mengkhawatirkan lagi, partikel berskala nano dapat terserap oleh akar tanaman pangan, seperti selada dan gandum. Jika terus diabaikan, kondisi ini tidak hanya mengancam produktivitas panen di masa depan, tetapi juga berpotensi membawa polutan tersebut masuk ke dalam rantai makanan manusia.</p>",
+            soal: [
+                { id: 1, q: "Berdasarkan teks, apa penyebab utama menumpuknya residu mikroplastik di lahan pertanian?", a: "Penggunaan mulsa plastik secara masif.", b: "Penggunaan pupuk kimia cair.", c: "Limbah pabrik yang dibuang ke sawah.", d: "Polusi udara dari asap pembakaran.", kunci: "a" },
+                { id: 2, q: "Makna kata 'menginvasi' pada paragraf pertama memiliki arti yang paling dekat dengan...", a: "Meninggalkan", b: "Melindungi", c: "Memasuki dan menguasai", d: "Menumbuhkan", kunci: "c" },
+                { id: 3, q: "Manakah pernyataan yang merupakan dampak langsung mikroplastik terhadap kualitas tanah?", a: "Tanah menjadi lebih subur karena mikrob bertambah.", b: "Berkurangnya kemampuan tanah dalam menahan air.", c: "Cacing tanah berkembang biak dengan cepat.", d: "Akar tanaman menjadi lebih kuat dan panjang.", kunci: "b" },
+                { id: 4, q: "Apa ancaman jangka panjang yang disiratkan penulis pada paragraf terakhir?", a: "Harga mulsa plastik akan naik tajam.", b: "Petani akan beralih ke tanaman non-pangan.", c: "Mikroplastik dapat terkonsumsi oleh manusia.", d: "Sawah akan diubah menjadi area industri.", kunci: "c" },
+                { id: 5, q: "Apa fungsi tanda kurung '(lembaran plastik penutup tanah untuk menekan gulma)' pada paragraf pertama?", a: "Memberikan opini penulis tentang mulsa.", b: "Mendefinisikan dan menjelaskan istilah mulsa plastik.", c: "Mengganti kata yang hilang dalam kalimat.", d: "Menunjukkan bagian teks yang tidak penting.", kunci: "b" },
+                { id: 6, q: "Tujuan utama penulis dalam teks informasi di atas adalah untuk...", a: "Mengajak petani membeli mulsa jenis baru.", b: "Memberi informasi cara merawat cacing tanah.", c: "Mengedukasi pembaca tentang bahaya mikroplastik di darat.", d: "Mempromosikan hasil panen gandum bebas plastik.", kunci: "c" }
+            ]
+        },
+        {
+            id: 2,
+            type: "badge-fiksi",
+            typeName: "Teks Fiksi",
+            title: "Sepatu Bot untuk Ratih",
+            text: "<p>Hujan bulan Desember selalu kejam bagi jalanan di desa Sukajaya. Jalan tanah merah yang membelah desa itu berubah menjadi bubur lumpur yang dalam setiap pagi. Bagi Ratih, siswi kelas 2 SMP, ini berarti pertempuran harian. Sepatu kets putih kebanggaannya, hadiah dari ibunya sebelum berangkat merantau, harus dibungkus kresek hitam rangkap dua agar tidak hancur lebur.</p><p>Bapak, yang bekerja sebagai pemecah batu, sering memandang sedih ke arah kaki Ratih setiap kali anaknya bersiap ke sekolah. 'Bapak akan belikan sepatu bot karet akhir bulan nanti, Nduk,' janji Bapak sebulan yang lalu. Namun, hujan terus turun, dan Bapak tak bisa memecah batu. Tak ada batu yang dipecah, berarti tak ada upah.</p><p>Pagi itu, kresek yang dipakai Ratih sobek tertusuk ranting. Lumpur dingin seketika meresap ke dalam kain sepatunya. Ratih menggigit bibir, menahan tangis. Ia tidak ingin mengeluh, ia tahu Bapak sudah cukup terbebani. Sesampainya di rumah siang harinya, ia mencuci sepatu itu diam-diam di sumur belakang.</p><p>Keesokan paginya, ada kotak kardus bekas di atas meja beranda. Di dalamnya ada sepasang sepatu bot karet berwarna kuning menyala. Ratih bergegas mencari Bapak. Ia menemukan Bapak sedang mengoleskan obat merah di tangannya yang melepuh kedinginan. Ternyata malam tadi, Bapak ikut memikul kayu bakar di desa sebelah menerobos hujan lebat.</p>",
+            soal: [
+                { id: 7, q: "Latar tempat dan suasana yang tergambar kuat pada awal cerita adalah...", a: "Perkotaan yang bising dan panas.", b: "Desa terpencil dengan jalanan berlumpur di musim hujan.", c: "Sekolah mewah di pagi yang cerah.", d: "Rumah panggung di tengah hutan rimbun.", kunci: "b" },
+                { id: 8, q: "Mengapa Bapak belum bisa membelikan sepatu bot seperti yang dijanjikannya bulan lalu?", a: "Karena Bapak lupa menyisihkan uang.", b: "Karena Ratih menolak memakai sepatu bot.", c: "Karena hujan membuat Bapak tidak bisa bekerja memecah batu.", d: "Karena toko sepatu di desa tutup selama musim hujan.", kunci: "c" },
+                { id: 9, q: "Tindakan Ratih mencuci sepatu diam-diam di sumur belakang menunjukkan karakter...", a: "Pemarah dan pendendam.", b: "Manja dan penuntut.", c: "Pengertian dan tidak ingin merepotkan orang tua.", d: "Ceroboh dan tidak peduli barang.", kunci: "c" },
+                { id: 10, q: "Apa kesimpulan (inferensi) yang bisa ditarik dari kondisi tangan Bapak yang melepuh di akhir cerita?", a: "Bapak terjatuh saat mengendarai sepeda motor.", b: "Bapak bekerja sangat keras dan berkorban demi membeli sepatu bot Ratih.", c: "Bapak alergi terhadap air hujan di desa sebelah.", d: "Bapak sedang menguji kekuatan obat merah.", kunci: "b" },
+                { id: 11, q: "Gagasan utama dari cerita fiksi di atas adalah tentang...", a: "Cara mencuci sepatu kets agar tetap putih.", b: "Cinta kasih dan pengorbanan seorang ayah di tengah kemiskinan.", c: "Dampak buruk musim hujan bagi anak sekolah.", d: "Cara bertahan hidup sebagai pemecah batu.", kunci: "b" },
+                { id: 12, q: "Berdasarkan penilaian terhadap teks, kalimat yang memicu respons emosional (haru) paling kuat bagi pembaca adalah...", a: "'Hujan bulan Desember selalu kejam bagi jalanan di desa Sukajaya.'", b: "'Sepatu kets putih kebanggaannya, hadiah dari ibunya...'", c: "'Ternyata malam tadi, Bapak ikut memikul kayu bakar... menerobos hujan lebat.'", d: "'Pagi itu, kresek yang dipakai Ratih sobek tertusuk ranting.'", kunci: "c" }
+            ]
+        },
+        {
+            id: 3,
+            type: "badge-info",
+            typeName: "Teks Informasi",
+            title: "Mengenal 'Internet of Things' (IoT) di Rumah",
+            text: "<p>Istilah 'Internet of Things' (IoT) mungkin terdengar asing, namun teknologinya mungkin sudah ada di ruang tamu Anda. Secara sederhana, IoT adalah konsep di mana benda-benda fisik sehari-hari dihubungkan ke internet agar dapat bertukar data dan dikendalikan secara jarak jauh.</p><p>Sebagai contoh, bayangkan Anda sedang dalam perjalanan pulang. Melalui aplikasi di ponsel pintar, Anda menyalakan pendingin ruangan (AC) di rumah dan memanaskan air untuk mandi. Saat Anda tiba, rumah sudah sejuk dan air hangat telah siap. AC dan pemanas air tersebut adalah contoh perangkat IoT. Mereka dilengkapi dengan sensor dan perangkat lunak yang memungkinkan mereka 'berkomunikasi' dengan ponsel Anda melalui jaringan Wi-Fi.</p><p>Selain kemudahan, IoT juga menawarkan efisiensi energi. Lampu pintar pintar dapat mendeteksi keberadaan orang; ia akan menyala otomatis saat ada yang masuk ruangan dan mati saat ruangan kosong. Meskipun membawa banyak kepraktisan, pengguna IoT harus mewaspadai risiko keamanan digital. Karena perangkat ini terhubung ke internet, peretas berpotensi mengambil alih kendali jika sistem keamanan jaringan rumah (seperti kata sandi Wi-Fi) lemah.</p>",
+            soal: [
+                { id: 13, q: "Berdasarkan teks, definisi sederhana dari Internet of Things (IoT) adalah...", a: "Jaringan Wi-Fi super cepat untuk mengunduh film.", b: "Konsep menghubungkan benda fisik ke internet untuk dikendalikan jarak jauh.", c: "Aplikasi ponsel untuk menghemat baterai.", d: "Lampu yang menyala tanpa menggunakan listrik.", kunci: "b" },
+                { id: 14, q: "Berdasarkan teks, syarat utama agar AC dan pemanas air dapat menjadi perangkat IoT adalah...", a: "Harus bermerek terkenal dan mahal.", b: "Harus dilengkapi sensor, perangkat lunak, dan terhubung jaringan.", c: "Hanya boleh dioperasikan saat orang berada di rumah.", d: "Harus menyala selama 24 jam penuh.", kunci: "b" },
+                { id: 15, q: "Contoh efisiensi energi yang ditawarkan oleh teknologi IoT berdasarkan teks adalah...", a: "AC yang bisa mendinginkan rumah lebih cepat.", b: "Lampu yang otomatis mati saat tidak ada orang di ruangan.", c: "Pemanas air yang menggunakan tenaga surya.", d: "Ponsel pintar yang baterainya tidak pernah habis.", kunci: "b" },
+                { id: 16, q: "Mengapa penulis menyisipkan peringatan tentang keamanan digital pada paragraf terakhir?", a: "Untuk menakut-nakuti pembaca agar tidak membeli alat elektronik.", b: "Karena harga perangkat IoT sangat mahal di pasaran.", c: "Sebagai imbauan objektif bahwa konektivitas internet membawa risiko peretasan.", d: "Untuk menyalahkan perusahaan penyedia layanan internet.", kunci: "c" },
+                { id: 17, q: "Ide pokok dari paragraf kedua adalah...", a: "Bahaya meninggalkan rumah dalam keadaan kosong.", b: "Ilustrasi dan contoh penerapan IoT dalam kehidupan sehari-hari.", c: "Cara memasang AC dan pemanas air yang benar.", d: "Perbandingan antara AC dan kipas angin.", kunci: "b" },
+                { id: 18, q: "Apa yang kemungkinan akan terjadi jika kata sandi Wi-Fi di rumah yang penuh perangkat IoT bocor?", a: "Tagihan listrik akan berkurang.", b: "Perangkat IoT akan rusak secara fisik.", c: "Pihak tidak bertanggung jawab bisa mengendalikan perangkat rumah dari jauh.", d: "Sensor pada lampu akan menjadi lebih sensitif.", kunci: "c" }
+            ]
+        },
+        {
+            id: 4,
+            type: "badge-fiksi",
+            typeName: "Teks Fiksi",
+            title: "Lentera Kertas di Tepi Sungai",
+            text: "<p>Bulan bundar bersinar pucat di atas Sungai Kapuas. Di tepian panggung kayu, Nenek merangkai bilah bambu menjadi kerangka perahu kecil. Tangan keriputnya lincah menempelkan kertas minyak berwarna merah. Di tengah perahu, sebuah lilin kecil disematkan.</p><p>Ayu duduk memperhatikan lekat-lekat. 'Nek, untuk apa kita membuat ratusan lentera perahu ini? Lebaran masih lama,' tanyanya. Nenek tersenyum tipis. Matanya menerawang jauh menembus arus sungai yang tenang. 'Ini bukan untuk perayaan, Yu. Ini untuk mengingat. Mengingat kakekmu, dan kawan-kawannya yang tidak pernah pulang dari muara dua puluh tahun lalu.'</p><p>Hati Ayu mencelos. Ia belum lahir saat badai besar menenggelamkan tiga perahu nelayan desa mereka. Nenek kemudian menyalakan lilin di perahu pertama, lalu perlahan mendorongnya ke air. Cahaya kecil itu terombang-ambing, lalu hanyut terbawa arus. Satu per satu warga desa mulai turun ke tepi sungai, membawa lentera yang sama. Malam itu, Sungai Kapuas berubah menjadi lautan bintang merah yang mengalir sunyi. Tidak ada isak tangis, hanya doa yang terucap pelan di antara debur air, melepaskan kepergian dengan ikhlas.</p>",
+            soal: [
+                { id: 19, q: "Aktivitas apa yang sedang dilakukan Nenek dan Ayu di awal cerita?", a: "Menangkap ikan di malam hari.", b: "Membuat perahu lentera dari bambu dan kertas.", c: "Menunggu kedatangan Kakek dari muara.", d: "Mempersiapkan perayaan malam Lebaran.", kunci: "b" },
+                { id: 20, q: "Dari percakapan Nenek, apa tujuan sebenarnya dari tradisi menghanyutkan lentera perahu tersebut?", a: "Sebagai lomba balap perahu mainan desa.", b: "Untuk penerangan warga desa mencari ikan.", c: "Bentuk peringatan dan doa bagi para nelayan yang hilang di muara.", d: "Untuk mengusir nasib buruk dari desa.", kunci: "c" },
+                { id: 21, q: "Makna frasa 'Hati Ayu mencelos' pada paragraf ketiga adalah...", a: "Ayu merasa sangat gembira.", b: "Ayu merasa terkejut, sedih, dan berempati.", c: "Ayu merasa marah kepada Nenek.", d: "Ayu merasa bosan menunggu lentera selesai.", kunci: "b" },
+                { id: 22, q: "Gaya bahasa (majas) apa yang digunakan pada kalimat: 'Sungai Kapuas berubah menjadi lautan bintang merah yang mengalir sunyi'?", a: "Personifikasi (mengumpamakan benda mati seolah hidup).", b: "Metafora (perbandingan langsung tanpa kata penghubung).", c: "Hiperbola (pernyataan yang melebih-lebihkan).", d: "Ironi (sindiran yang bertentangan dengan fakta).", kunci: "b" },
+                { id: 23, q: "Apa nilai moral yang paling menonjol dari penggambaran warga desa pada akhir cerita?", a: "Keikhlasan dalam menerima kehilangan dan kebersamaan mendoakan.", b: "Kekecewaan terhadap pemerintah yang tidak membantu.", c: "Kemeriahan pesta rakyat yang tidak kenal waktu.", d: "Kesedihan mendalam yang membuat warga putus asa.", kunci: "a" },
+                { id: 24, q: "Jika cerita ini dilanjutkan, reaksi emosional yang paling logis ditunjukkan oleh Ayu adalah...", a: "Meninggalkan Nenek sendirian di sungai.", b: "Turut membantu Nenek menyalakan lilin dan berdoa bersama.", c: "Membuang lentera tersebut karena menganggapnya kuno.", d: "Memarahi warga karena mengotori sungai.", kunci: "b" }
+            ]
+        },
+        {
+            id: 5,
+            type: "badge-info",
+            typeName: "Teks Informasi",
+            title: "Sorgum: Pahlawan Pangan Masa Depan",
+            text: "<p>Ketika mendengar kata 'makanan pokok', mayoritas orang Indonesia akan langsung memikirkan beras. Ketergantungan yang tinggi pada beras ini rentan menimbulkan krisis pangan, terutama saat terjadi kekeringan ekstrem akibat fenomena El Nino. Oleh karena itu, diversifikasi (penganekaragaman) pangan lokal menjadi sangat krusial. Salah satu komoditas yang menjanjikan adalah sorgum.</p><p>Sorgum adalah tanaman serbaguna dari keluarga rumput-rumputan. Keunggulan utamanya terletak pada daya tahannya yang luar biasa terhadap cuaca kering dan tanah tandus. Berbeda dengan padi yang membutuhkan banyak air, sorgum mampu bertahan dengan curah hujan minim. Tanaman ini memiliki sistem perakaran yang dalam sehingga mampu mencari sumber air di lapisan tanah bawah.</p><p>Secara nutrisi, sorgum tidak kalah dari beras atau gandum. Biji sorgum bebas gluten, kaya serat, dan memiliki indeks glikemik yang rendah. Artinya, sorgum dicerna lebih lambat oleh tubuh sehingga tidak menyebabkan lonjakan gula darah secara drastis, menjadikannya pilihan ideal bagi penderita diabetes. Meskipun potensinya besar, tantangan terbesar saat ini adalah persepsi masyarakat yang masih menganggap sorgum sebagai pakan ternak, bukan pangan manusia.</p>",
+            soal: [
+                { id: 25, q: "Mengapa ketergantungan masyarakat pada beras dianggap berisiko tinggi menurut teks?", a: "Karena beras mengandung banyak gluten yang berbahaya.", b: "Karena harga beras ditentukan oleh pedagang asing.", c: "Karena produksi padi sangat rentan terhadap kondisi kekeringan ekstrem.", d: "Karena beras sulit dicerna oleh tubuh.", kunci: "c" },
+                { id: 26, q: "Makna kata 'diversifikasi' dalam kalimat 'diversifikasi pangan lokal menjadi sangat krusial' adalah...", a: "Penghematan besar-besaran.", b: "Penganekaragaman atau penambahan jenis.", c: "Penghancuran massal.", d: "Pembelian dari luar negeri (impor).", kunci: "b" },
+                { id: 27, q: "Faktor biologis apa yang membuat tanaman sorgum mampu bertahan di daerah kering?", a: "Memiliki daun yang sangat lebar untuk menangkap embun.", b: "Batangnya mampu menyimpan cadangan air seperti kaktus.", c: "Sistem perakarannya sangat dalam untuk mencari air bawah tanah.", d: "Menghasilkan getah yang mencegah penguapan.", kunci: "c" },
+                { id: 28, q: "Siapa yang paling direkomendasikan secara kesehatan untuk mengonsumsi sorgum berdasarkan teks di atas?", a: "Atlet yang membutuhkan lonjakan energi instan.", b: "Penderita diabetes yang perlu menjaga kestabilan gula darah.", c: "Anak-anak yang kekurangan berat badan.", d: "Orang yang alergi terhadap segala jenis rumput.", kunci: "b" },
+                { id: 29, q: "Apa kendala atau hambatan utama dalam mengembangkan sorgum sebagai makanan pokok di Indonesia?", a: "Benih sorgum sangat langka dan mahal.", b: "Tanah di Indonesia terlalu basah untuk sorgum.", c: "Persepsi negatif masyarakat yang menganggapnya sebatas pakan ternak.", d: "Pemerintah melarang penanaman sorgum.", kunci: "c" },
+                { id: 30, q: "Kesimpulan yang paling tepat dari keseluruhan teks adalah...", a: "Padi harus dihentikan penanamannya dan diganti sorgum sepenuhnya.", b: "Sorgum adalah alternatif pangan sehat dan tahan iklim yang perlu diedukasikan ke masyarakat.", c: "Sorgum adalah penyebab utama rendahnya produksi beras nasional.", d: "Krisis pangan hanya dapat diselesaikan dengan mengimpor gandum.", kunci: "b" }
+            ]
+        }
+    ];
+
+    let currentWacanaIndex = 0;
+    const answers = {}; // object to store answers { soalId: "a"/"b"/"c"/"d" }
+
+    function renderWacana() {
+        const w = db[currentWacanaIndex];
+        
+        document.getElementById('wacana-indicator').innerText = `Wacana ${currentWacanaIndex + 1} dari ${db.length}`;
+        document.getElementById('wacana-type').className = `badge ${w.type}`;
+        document.getElementById('wacana-type').innerText = w.typeName;
+        document.getElementById('wacana-title').innerText = w.title;
+        document.getElementById('wacana-text').innerHTML = w.text;
+
+        const soalContainer = document.getElementById('soal-container');
+        soalContainer.innerHTML = '';
+
+        w.soal.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'soal-card';
+            
+            // Check if user already answered
+            const val = answers[s.id] || "";
+
+            card.innerHTML = `
+                <span class="soal-number">Soal ${s.id}</span>
+                <div class="soal-text">${s.q}</div>
+                <div class="options">
+                    <label class="option-label" style="${val==='a' ? 'background:#eff6ff; border-color:#3b82f6;' : ''}">
+                        <input type="radio" name="soal_${s.id}" value="a" onchange="saveAnswer(${s.id}, 'a')" ${val === 'a' ? 'checked' : ''}>
+                        A. ${s.a}
+                    </label>
+                    <label class="option-label" style="${val==='b' ? 'background:#eff6ff; border-color:#3b82f6;' : ''}">
+                        <input type="radio" name="soal_${s.id}" value="b" onchange="saveAnswer(${s.id}, 'b')" ${val === 'b' ? 'checked' : ''}>
+                        B. ${s.b}
+                    </label>
+                    <label class="option-label" style="${val==='c' ? 'background:#eff6ff; border-color:#3b82f6;' : ''}">
+                        <input type="radio" name="soal_${s.id}" value="c" onchange="saveAnswer(${s.id}, 'c')" ${val === 'c' ? 'checked' : ''}>
+                        C. ${s.c}
+                    </label>
+                    <label class="option-label" style="${val==='d' ? 'background:#eff6ff; border-color:#3b82f6;' : ''}">
+                        <input type="radio" name="soal_${s.id}" value="d" onchange="saveAnswer(${s.id}, 'd')" ${val === 'd' ? 'checked' : ''}>
+                        D. ${s.d}
+                    </label>
+                </div>
+            `;
+            soalContainer.appendChild(card);
+        });
+
+        // Toggle Buttons
+        document.getElementById('btn-prev').style.display = currentWacanaIndex > 0 ? 'block' : 'none';
+        
+        if (currentWacanaIndex === db.length - 1) {
+            document.getElementById('btn-next').style.display = 'none';
+            document.getElementById('btn-submit').style.display = 'block';
+        } else {
+            document.getElementById('btn-next').style.display = 'block';
+            document.getElementById('btn-submit').style.display = 'none';
+        }
+    }
+
+    function saveAnswer(soalId, ans) {
+        answers[soalId] = ans;
+        // Re-render UI just for visual feedback (highlighting)
+        renderWacana();
+    }
+
+    function nextWacana() {
+        if (currentWacanaIndex < db.length - 1) {
+            currentWacanaIndex++;
+            renderWacana();
+        }
+    }
+
+    function prevWacana() {
+        if (currentWacanaIndex > 0) {
+            currentWacanaIndex--;
+            renderWacana();
+        }
+    }
+
+    function submitQuiz() {
+        // Validation check
+        const totalSoal = db.reduce((acc, w) => acc + w.soal.length, 0);
+        const answeredCount = Object.keys(answers).length;
+        
+        if(answeredCount < totalSoal) {
+            const confirmSubmit = confirm(`Anda baru menjawab ${answeredCount} dari ${totalSoal} soal. Yakin ingin mengumpulkan?`);
+            if(!confirmSubmit) return;
+        }
+
+        // Calculate
+        let correctCount = 0;
+        let reviewHTML = "";
+
+        db.forEach(w => {
+            reviewHTML += `<div style="margin-bottom:2rem;"><h4>Kajian Wacana: ${w.title}</h4>`;
+            w.soal.forEach(s => {
+                const userAns = answers[s.id];
+                const isCorrect = userAns === s.kunci;
+                if(isCorrect) correctCount++;
+
+                reviewHTML += `
+                    <div class="review-box" style="border-left: 4px solid ${isCorrect ? '#10b981' : '#ef4444'}">
+                        <strong>Soal ${s.id}:</strong> ${s.q}<br>
+                        Jawaban Anda: <span class="${isCorrect ? 'correct' : 'incorrect'}">${userAns ? userAns.toUpperCase() : 'Tidak diisi'}</span> 
+                        ${!isCorrect ? `| Kunci Benar: <span class="correct">${s.kunci.toUpperCase()}</span>` : ''}
+                    </div>
+                `;
+            });
+            reviewHTML += `</div>`;
+        });
+
+        const score = Math.round((correctCount / totalSoal) * 100);
+        
+        document.getElementById('quiz-container').style.display = 'none';
+        const resultScreen = document.getElementById('result-screen');
+        resultScreen.style.display = 'block';
+        
+        const scoreCircle = document.getElementById('final-score');
+        scoreCircle.innerText = score;
+        scoreCircle.style.backgroundColor = score >= 75 ? '#10b981' : (score >= 50 ? '#f59e0b' : '#ef4444');
+        
+        document.getElementById('review-container').innerHTML = reviewHTML;
+    }
+
+    // Initialize
+    window.onload = () => {
+        renderWacana();
+    };
+</script>
+
+</body>
+</html>
